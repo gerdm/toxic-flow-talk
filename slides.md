@@ -1,7 +1,6 @@
 ---
 theme: default
 background: ./digital-trading.jpeg
-class: text-center
 highlighter: shiki
 lineNumbers: false
 info: |
@@ -12,21 +11,24 @@ colorSchema: light
 ---
 
 # Detecting toxic flow
+An online Bayesian approach
+
+Álvaro Cartea, **Gerardo Duran-Martin**, and Leandro Sánchez-Betancourt
 
 ---
 layout: center
 ---
 
-# Forex (FX) trading from a Broker’s POV
+# Forex (FX) trading from a broker’s POV
 
 Two kinds of *markets*
 
 ---
 
-### Trading in an exchange
+### Trading in an exchange with a limit order book (LOB)
 
 - Place an order to buy (or sell) at any price (via a limit order)
-- Order gets filled only if matched in the limit order book (LOB)
+- Order gets filled when matched in the limit order book LOB
 
 ```mermaid
 graph BT
@@ -56,9 +58,8 @@ Our paper follows the POV of the broker
 
 ---
 
-# Broker - Exchange relationship
-
-Broker is a participant of the exchange
+## Broker - Exchange relationship
+Broker is a participant of the exchange and uses the exchange to hedge positions
 
 - dotted line: what the broker cannot see
 - straight lines: what the broker can see
@@ -80,9 +81,8 @@ classDef broker fill:#e49444
 
 ---
 
-# Brokers and the problem of toxic flow
-
-- Broker uses inventory to provide liquidity
+## Brokers and the problem of toxic flow
+Broker uses inventory to provide liquidity
 
 ```mermaid
 graph BT
@@ -121,17 +121,17 @@ classDef broker fill:#e49444;
 
 # Problem setup
 
-- A trade arrives from client $C$ at time $t$.
-- Given a fixed window $\mathfrak G \in [0, T]$, the broker decides whether she wants to **externalise or internalise** the trade for a period of $t + \mathfrak G$.
+- A trade arrives from client $C$ at time $t \in (0, T)$.
+- Given a fixed *toxicity horizon* $0 < \mathfrak G \ll T$, the broker decides whether she wants to **externalise or internalise** the trade for the period $[t, t + \mathfrak G]$.
+- We consider $\mathfrak G$ to be, e.g., `1s`, `15s`, `1min`
 
-Externalisation / internalisation
-
+Externalisation / internalisation dilema
 - externalise if the trade is **toxic** — trader can profit from broker between $[t, t + \mathfrak{G}]$
-- internalise if the trade is **benign** — trader cannot profit from broker between $[t, t + \mathfrak{G}]$
+- internalise if the trade is **benign** trader cannot profit from broker between $[t, t + \mathfrak{G}]$
 
 ---
 
-### Benign flow between $[t, t + \mathfrak{G}]$
+## Benign flow between $[t, t + \mathfrak{G}]$
 
 ```mermaid
 graph BT
@@ -205,28 +205,27 @@ Motivating examples
 layout: center
 ---
 
-# Toxicity
-
-A definition
+# Toxicity Definition
 
 ---
 
-## Notation
-
+### Definition (Toxic trade)
+Let 
 - Time $t \in {\mathfrak T} = [0, T]$
 , where $0$ is the start of the trading period and $T$ the end of the trading period.
 - $S_t^a$ the best ask price in the LOB
 - $S_t^b$ the best bid price in the LOB
-- $\tau_t^+ = \inf\left\{  u \in [t,T] : S_u^b > s_t^a \right\}$ time at which the best bid price is above the best ask price
+- $\tau_t^+ = \inf\left\{  u \in [t,T] : S_u^b > S_t^a \right\}$ time at which the best bid price is above the best ask price
 - $\tau_t^- = \inf\left\{ u \in [t, T]: S_t^b > S_u^a \right\}$ time at which the best ask price is above the best bid ask
+- $\mathfrak G > 0$ the toxicity horizon
+
+
+A client’s buy (resp. sell) filled by the broker at time $t$ is toxic for the broker if $\tau_t^+  \leq t + \mathfrak G$ (resp. if $\tau_t^- \leq t + \mathfrak G$)
+
+**Loosely: $\tau$ is the first time at which the trade becomes profitable**
 
 ---
-
-**Definition** (Toxic trade)
-
-Let $\mathfrak G > 0$ be the toxicity horizon. A client’s buy (resp. sell) filled by the broker at time $t$ is toxic for the broker if $\tau_t^+  \leq t + \mathfrak G$ (resp. if $\tau_t^- \leq t + \mathfrak G$)
-
-
+layout: center
 ---
 
 # The effect of the toxic horizon $\mathfrak G$
@@ -242,7 +241,7 @@ A benign (buy) trade that becomes a toxic trade
 
 ---
 
- ## Toxic buy trade at $\mathfrak G= 60$
+## Toxic buy trade at $\mathfrak G= 60$
 
 <img class="horizontal-center" width=500
      src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%203.png">
@@ -260,7 +259,8 @@ Top 6 clients by number of trades
 layout: center
 ---
 
-# Broker’s goal
+## Broker’s goal
+
 Given a toxicity horizon $\mathfrak G$, the goal of the broker is to externalise as much toxic flow as possible and internalise as much benign flow as possible ⇒ **classification problem**.
 
 ---
@@ -282,7 +282,8 @@ Toxicity detection as a classification problem
 - target variable $y_t \in \{0,1\}$ — whether the period $[t, t+\mathfrak G]$ is toxic (available after time $t + \mathfrak G$).
 - features ${\bf x}_t \in \mathbb{R}^M$ — available at time $t$.
 - $\text{Bern}(y | m) = m^{y} ( 1 - m)^{1-y}$ — PMF for a Bernoulli-distributed random variable $y$
-- $f: \mathbb{R}^M \times \mathbb{R}^M \to [0,1]$ is a statistical model
+- $f: \mathbb{R}^D \times \mathbb{R}^M \to [0,1]$ is a statistical model
+- $\boldsymbol\theta\in\mathbb{R}^D$ the model parameters
 - $\hat y_t = f(\boldsymbol\theta, {\bf x}_t)$ a prediction.
 
 ---
@@ -296,10 +297,25 @@ Toxicity detection as a classification problem
 
 ---
 
+## Toy dataset to illustrate some ideas**
+
+Moon’s dataset. ** denotes that we talk about the toy dataset.
+
+<img class="horizontal-center" width=500
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%205.png">
+
+---
+layout: center
+---
+
+# How do we train a statistical model for a streaming dataset?
+
+---
+
 ## The train / test approach to training machine learning algorithms for time series data
 
-<img class="centered" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%205.png">
+<img class="horizontal-center" width=500
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%206.png">
 
 ---
 
@@ -310,9 +326,11 @@ Toxicity detection as a classification problem
 
 ---
 
-### Implicit assumptions (cont’d)
+### Implicit assumptions
 
-Neither assumption is usually true in practice, so that a train / test / retrain approach is often used. This raises more questions:
+Neither assumption is usually true in practice, so that a train / test / retrain approach is often used.
+This raises more questions:
+
 - How often do we retrain?
 - How much data do we keep for retraining?
 
@@ -322,16 +340,16 @@ These choices are often encoded as ***hyperparameters*** of the model.
 
 ## An online approach to training statistical models
 
-A *limit case* to the train / test / retrain approach
+A **limit case** to the train / test / retrain approach
 
 <img class="horizontal-center" width=300
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%206.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%207.png">
 
 ---
 
 ## A Bayesian online approach to training statistical models
 
-Let $f: \mathbb{R}^D\times \mathbb{R}^M \to [0, 1]$ be a neural network parameterised by $\boldsymbol\theta\in\mathbb{R}^D$. Suppose $p(\boldsymbol\theta \vert {\cal D}_{1:t-1})$ —the prior— is known. We seek to obtain sequential estimates of $\boldsymbol\theta$ as
+Let $f: \mathbb{R}^D\times \mathbb{R}^M \to [0, 1]$ be a statistical model parametersied by $\boldsymbol\theta\in\mathbb{R}^D$. Suppose $p(\boldsymbol\theta \vert {\cal D}_{1:t-1})$ —the prior— is known. We seek to obtain sequential estimates of $\boldsymbol\theta$ as
 
 $$
 \begin{aligned}
@@ -344,15 +362,16 @@ $$
 
 ## A Bayesian online approach to training statistical models
 
-<img class="horizontal-center" width=400
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%207.png">
+<img class="horizontal-center" width=500
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%208.png">
 
 ---
 
 ## Some notes
 
-- Estimating $p(\boldsymbol\theta | {\cal D}_{1:t})$ in closed form requires that $p(y_t \vert \boldsymbol\theta, {\bf x})$ and $p(\boldsymbol\theta \vert {\cal D}_{t-1})$ are ****************conjugate**************** to one another
+- Estimating $p(\boldsymbol\theta | {\cal D}_{1:t})$ in closed form requires that $p(y_t \vert \boldsymbol\theta, {\bf x})$ and $p(\boldsymbol\theta \vert {\cal D}_{t-1})$ are **conjugate** to one another
 - For statistical machine learning models, we assume that the parameters of the model are Normally-distributed (The Gaussian ansatz)
+- Our statistical model is a Bernoulli-distribution, which is **not** conjugate to a Gaussian.
 
 ---
 
@@ -382,25 +401,26 @@ $$
 
 ---
 
-## R-VGA update (cont’d)
+## R-VGA update: moment-propagation
 
-<img class="horizontal-center" width=400
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%208.png">
+<img class="horizontal-center" width=500
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%209.png">
 
 ---
+
 
 ## Online learning of neural networks via R-VGA
 
 Our choice of neural network: a multilayered-perceptron (MLP)
 
 <img class="horizontal-center" width=400
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%209.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2010.png">
 
 ---
 
-## R-VGA for neural networks
+## R-VGA for neural networks**
 
-A toy example
+Three-hidden layer MLP, 50 units per layer, and ReLu activation function
 
 <img class="horizontal-center" width=500
      src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/bern-ekf_(1).gif">
@@ -409,51 +429,82 @@ A toy example
 
 ## RVGA drawbacks
 
-- For a model with $D$ parameters, an RVGA-like update incurs in in a memory cost of $O(D^2)$ — one step a three-hidden layer MLP would incur in **190gb of memory per-datapoint**.
+- For a model with $D$ parameters, an RVGA-like update incurs in in a memory cost of $O(D^2)$ — one step the three-hidden layer MLP that we will consider later on would incur in **190gb of memory per-datapoint**.
 - A prediction made at time $t$ is not available until time $t+ {\mathfrak G}$ — asynchronous predict / update step.
 
 ---
 
-# Our work: Asynchronous and efficient neural-network predict / learning
+# Our work: A procedure for asynchronous and efficient neural-network training
 
 1. Memory and time efficient way to do online learning of neural networks
 2. Asynchronous model predictions
+
+We call our method **PULSE**.
+
+---
+
+## PULSE: Projection-based Unification of Last-layer and Subspace Estimation
+
+Main components:
+
+1. subspace neural networks,
+2. hidden-layers / output-layer decomposition, and
+3. RVGA-like update rule
 
 ---
 
 ## 1. Intrinsic dimension hypothesis
 
-See [Measuring the Intrinsic Dimension of Objective Landscapes \[1804.08838\]](https://www.notion.so/Measuring-the-Intrinsic-Dimension-of-Objective-Landscapes-1804-08838-18efd94d0c804054b176426c9aefebbc?pvs=21) and slides on the [intrinsic dimension hypothesis](https://www.notion.so/Intrinsic-dimension-hypothesis-8370afbedfa345bca87de6e337c7d72e?pvs=21).
+See [Measuring the Intrinsic Dimension of Objective Landscapes \[1804.08838\]](https://www.notion.so/Measuring-the-Intrinsic-Dimension-of-Objective-Landscapes-1804-08838-18efd94d0c804054b176426c9aefebbc?pvs=21) and [Intrinsic dimension hypothesis](https://www.notion.so/Intrinsic-dimension-hypothesis-8370afbedfa345bca87de6e337c7d72e?pvs=21).
 
-Training within a **random, low-dimensional affine subspace** can suffice to reach high training and test accuracies on a variety of tasks, provided the training dimension exceeds a threshold that called the **intrinsic dimension**.
+Training within a **random, low-dimensional affine subspace** *can* suffice to reach high training and test accuracies on a variety of tasks, provided the training dimension exceeds a threshold that called the **intrinsic dimension**.
 
 $$
 \boldsymbol\theta = {\bf Az} + {\bf b}
 $$
 
 With ${\bf A}\in\mathbb{R}^{D\times d}$, ${\bf z} \in \reals^{d}$, and ${\bf b}\in\mathbb{R}^D$. $d \ll D$.
+
 The matrix ${\bf A}$ can either be random or learned from a *warmup* dataset
 
 ---
 
-## Learning the projection matrix $\bf A$
+## Learning in a subspace: R-VGA v.s. subspace R-VGA**
 
-- Train network in full space (using an unseen **warmup** dataset). Store parameters at each step and define the matrix ${\bf A} \in \mathbb{R}^{D\times d}$ whose $d$ columns are top $d$ principal components of the trajectory of parameters.
+See [One-pass learning methods for training Bayesian neural networks](https://www.notion.so/One-pass-learning-methods-for-training-Bayesian-neural-networks-a9133bf9e9574c49b8243d163414d447?pvs=21). The setup.
+
+- Multilayered perceptron (MLP) with three layers, 50 units per layer, and ReLU activation — `5301` units. Train using 500 samples / Test using 300 samples.
+- Less than 2% of the total degrees of freedom are required to achieve comparable performance.
+
+<img class="horizontal-center" width=400
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2011.png">
 
 ---
 
-### Example
+## Learning the projection matrix $\bf A$ and the offset $b$
 
-Learning the warmup dynamics
+See [How many degrees of freedom do we need to train deep networks: a loss landscape perspective \[2107.05802\]](https://www.notion.so/How-many-degrees-of-freedom-do-we-need-to-train-deep-networks-a-loss-landscape-perspective-2107-05-fd7472302b2844e2a67fa92544c78847?pvs=21) — authors show that this method increases the probability of achieving high training and test sets.
+
+- We fit neural network using adam (sgd with extra steps)
+- After each epoch, we store parameters
+- Define matrix ${\bf A} \in \mathbb{R}^{D\times d}$ whose $d$ columns are top $d$ principal components of the trajectory of parameters.
+- Define ${\bf b}\in\mathbb{R}^D$ to be the last set of updated parameters
+
+---
+
+## Pseudocode
+
+Learning the projection  matrix and offset vector
 
 ```python
 d = 100
 w = [...] # Size D
 params = [w]
 for n in n_warmup:
-	w = update_step(w, warmup)
+	w = update_step(w, warmup) # one epoch using adam
   params = [params, w]
 A = svd(params)[:, :d]
+b = w[:]
 ```
 
 ---
@@ -475,21 +526,23 @@ with $g$ the feature transformation and $\sigma(z) = (1 + \exp(-z))^{-1}$ is the
 ### Architecture decomposition
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2010.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2012.png">
 
 ---
 
-## 3. The PULSE assumption
+## 3. RVGA-like update
+
+Suppose
 
 $$
 p(y_t = 1 | \boldsymbol\theta, {\bf x}_t) = \text{Bern}(1 | \sigma({\bf w}^\intercal g({\bf A z} + {\bf b};{\bf x}_t)))
 $$
 
-With fixed ${\bf A}$, ${\bf b}$
+With fixed ${\bf A}$ and ${\bf b}$, ${\bf w}$ the output-layer parameters, and ${\bf z}$ the subspace hidden-layer parameters.
 
 ---
 
-## The PULSE algorithm: a modified RVGA update for neural networks
+## Proposed update
 
 Learn projected feature transformation parameters and full-dimension of last-layer parameters
 
@@ -505,14 +558,16 @@ $$
 By recursively solving the optimisation problem
 
 $$
-\argmin_{\boldsymbol\mu,\boldsymbol\nu,\boldsymbol\Gamma,\boldsymbol\Sigma} \text{KL}\Big(\phi_t({\bf w})\varphi_t({\bf z}) || \phi_{t-1}({\bf z}) \varphi_{t-1}({\bf w})p(y_t \vert {\bf z}, {\bf w}; {\bf x}_t)\Big)
+\argmin_{\boldsymbol\mu,\boldsymbol\nu,\boldsymbol\Gamma,\boldsymbol\Sigma} \text{KL}\Big(\phi_t({\bf w})\varphi_t({\bf z}) || \phi_{t-1}({\bf z}) \varphi_{t-1}({\bf w})q_t(y_t \vert {\bf z}, {\bf w}; {\bf x}_t)\Big)
 $$
+
+with $q_t(y_t \vert {\bf z}, {\bf w}; {\bf x}_t) = {\cal N}(y_t \vert \hat\sigma_t, \hat\sigma_t(1-\hat\sigma_t))$, and $\hat\sigma_t$ the first-order approximation of the model around the previous posterior means $\boldsymbol\mu_{t-1}$ and $\boldsymbol\nu_{t-1}$.
 
 ---
 
-### The PULSE equations
+# The PULSE equations
 
-The problem above yields the following equations
+The problem above yields the following equations 
 
 $$
 \begin{aligned}
@@ -532,14 +587,14 @@ with $h({\bf z}; {\bf x}) = g({\bf Az} + {\bf b}, {\bf x}_t)$
 
 ---
 
-## The PULSE approach to training statistical model online
+## The PULSE approach to training statistical model
 
 Suppose $s + \mathfrak G < t$.
 
 Client trades at time $s$, observe result and update weights at time $t + \mathfrak G$, make inference at time $t$ using the weights found at time $t + \mathfrak G$.
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2011.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2013.png">
 
 ---
 
@@ -548,9 +603,26 @@ Client trades at time $s$, observe result and update weights at time $t + \mathf
 Parameter update and prediction
 
 <img class="centered" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2012.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2014.png">
 
 ---
+layout: center
+---
+
+## Back to the broker’s problem
+Model benchmark
+
+---
+
+# The Data
+
+- **All plots and results we show are taken from LMAX data between 28 June 2022 and 21 October 2022**
+- EUR/USD top of book
+- Market orders only
+- We consider top 6 clients with most number of orders
+
+---
+
 
 # The features ${\bf x}_t$
 
@@ -563,10 +635,10 @@ Two classes of features
 
 ## LOB / clocks features
 
-- We construct features for each of the **two** sides of the book: bid / ask
-- For each side of the book we consider **three** clocks: a **time** clock, a **transaction** clock, and a **volume** clock
-- Each clock considers **seven** intervals spanning $[0, 2^n]$
-- Each interval is composed of **four** features
+- We construct features for each of the ******two****** sides of the book: bid / ask
+- For each side of the book we consider **three** clocks: a ****time**** clock, a ***********transaction*********** clock, and a *******volume******* clock
+- Each clock considers **seven** intervals spanning $[\mathfrak{C}2^{n-1}, \mathfrak{C}2^n)$ for $n=1, \ldots,7$
+- Each interval summarises **four** features
     1. bid-ask spread
     2. midprice
     3. volume imbalance
@@ -595,24 +667,17 @@ In total, we have `2 * 3 * 7 * 4 = 168`  features
 15. proportion of previous sharp trades made by client $c$ (C)
 
 ---
-
-# Deployment of online methods
-
+layout: center
 ---
 
-# The Data
-
-- **All plots and results we show are taken from LMAX data between 28 June 2022 and 21 October 2022**
-- EUR/USD top of book
-- Market orders only
-- We consider top 6 clients with most number of orders
+# Deployment of online methods
 
 ---
 
 ## Deployment procedure
 
 <img class="centered" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2013.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2015.png">
 
 ---
 
@@ -630,7 +695,7 @@ For a given toxicity horizon $\mathfrak G$, we evaluate
 receiver operating characteristic (ROC)
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2014.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2016.png">
 
 ---
 
@@ -639,7 +704,7 @@ receiver operating characteristic (ROC)
 Area under the ROC curve
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2015.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2017.png">
 
 ---
 
@@ -648,7 +713,7 @@ Area under the ROC curve
 $\mathfrak G = 10s$
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2016.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2018.png">
 
 ---
 
@@ -657,12 +722,13 @@ $\mathfrak G = 10s$
 $\mathfrak G = 60s$
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2017.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2019.png">
 
 ---
 
 ## Profitability and avoided loss
 
+One-shot optimisation problem to internalise or externalise trades.
 
 Denote $p^{+,M}$ the  probability that a buy order will be toxic; $p^{-,M}$ the probability that a sell order will be toxic. For a client’s single buy or sell order, the broker seeks to optimise
 
@@ -704,7 +770,7 @@ Take $\Phi = 0$ and evaluate $p^{\pm,M}$ in the deploy stage. Evaluate PnL and a
 We take all trades to be the median quantity in the dataset—€2,000
 
 <img class="horizontal-center" width=500
-     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/Untitled%2018.png">
+     src="/Detecting%20toxic%20flow%20ddc8bbf634f745db90e538d34ffe9e35/pnl-avoided-loss.png">
 
 ---
 
@@ -714,3 +780,13 @@ We take all trades to be the median quantity in the dataset—€2,000
 - We proposed a broker’s strategy that uses these predictions to decide which trades are internalised and which externalised
 - We developed the PULSE method for online training of neural networks using asynchronous predictions
 - We showed that PULSE attains the highest PnL and lowest avoided loss compared to each of the benchmark methods
+
+---
+layout: end
+---
+
+Detecting toxic flow
+
+[papers.ssrn.com/sol3/papers.cfm?abstract_id=4597879](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4597879)
+
+[gerdm.github.io/toxic-flow-talk](https://gerdm.github.io/toxic-flow-talk)
